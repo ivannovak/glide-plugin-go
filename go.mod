@@ -3,7 +3,7 @@ module github.com/ivannovak/glide-plugin-go
 go 1.24
 
 require (
-	github.com/ivannovak/glide v1.3.0
+	github.com/ivannovak/glide/v2 v2.1.2
 	github.com/spf13/cobra v1.10.1
 )
 
@@ -29,4 +29,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/ivannovak/glide => ../glide
+replace github.com/ivannovak/glide/v2 => ../glide

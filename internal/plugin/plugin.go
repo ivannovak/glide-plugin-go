@@ -2,8 +2,8 @@ package plugin
 
 import (
 	"github.com/ivannovak/glide-plugin-go/pkg/version"
-	"github.com/ivannovak/glide/pkg/plugin"
-	"github.com/ivannovak/glide/pkg/plugin/sdk"
+	"github.com/ivannovak/glide/v2/pkg/plugin"
+	"github.com/ivannovak/glide/v2/pkg/plugin/sdk"
 	"github.com/spf13/cobra"
 )
 

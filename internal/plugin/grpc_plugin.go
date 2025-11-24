@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/ivannovak/glide-plugin-go/pkg/version"
-	v1 "github.com/ivannovak/glide/pkg/plugin/sdk/v1"
+	v1 "github.com/ivannovak/glide/v2/pkg/plugin/sdk/v1"
 )
 
 // GRPCPlugin implements the gRPC GlidePluginServer interface
@@ -178,85 +178,4 @@ func (p *GRPCPlugin) executeShellCommand(ctx context.Context, cmdStr string, req
 		Stdout:   output,
 		Stderr:   []byte{},
 	}, nil
-}
-
-// DetectContext implements context detection for Go projects
-func (p *GRPCPlugin) DetectContext(ctx context.Context, req *v1.ContextRequest) (*v1.ContextResponse, error) {
-	// Use the detector to check if this is a Go project
-	projectRoot := req.ProjectRoot
-	if projectRoot == "" {
-		projectRoot = req.WorkingDir
-	}
-
-	// Run detection
-	data, err := p.detector.Detect(ctx, projectRoot)
-	if err != nil {
-		return &v1.ContextResponse{
-			ExtensionName: "go",
-			Detected:      false,
-		}, nil
-	}
-
-	// If not detected, return early
-	if data == nil {
-		return &v1.ContextResponse{
-			ExtensionName: "go",
-			Detected:      false,
-		}, nil
-	}
-
-	// Convert data map to response
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		return &v1.ContextResponse{
-			ExtensionName: "go",
-			Detected:      false,
-		}, nil
-	}
-
-	detected, _ := dataMap["detected"].(bool)
-	if !detected {
-		return &v1.ContextResponse{
-			ExtensionName: "go",
-			Detected:      false,
-		}, nil
-	}
-
-	// Build response
-	resp := &v1.ContextResponse{
-		ExtensionName: "go",
-		Detected:      true,
-		Metadata:      make(map[string]string),
-		Frameworks:    []string{},
-		Tools:         []string{},
-	}
-
-	// Convert metadata
-	for k, v := range dataMap {
-		if k == "detected" || k == "commands" {
-			continue
-		}
-		if str, ok := v.(string); ok {
-			resp.Metadata[k] = str
-		} else {
-			resp.Metadata[k] = fmt.Sprintf("%v", v)
-		}
-	}
-
-	// Extract version
-	if goVersion, ok := dataMap["go_version"].(string); ok {
-		resp.Version = goVersion
-	} else if version, ok := dataMap["version"].(string); ok {
-		resp.Version = version
-	}
-
-	// Add Go framework indicator
-	resp.Frameworks = append(resp.Frameworks, "go")
-
-	// Check for tools
-	if hasTools, ok := dataMap["has_dev_tools"].(bool); ok && hasTools {
-		resp.Tools = append(resp.Tools, "golangci-lint", "goreleaser")
-	}
-
-	return resp, nil
 }
