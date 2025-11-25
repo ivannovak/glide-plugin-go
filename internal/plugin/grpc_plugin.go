@@ -1,12 +1,6 @@
 package plugin
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-
 	"github.com/ivannovak/glide-plugin-go/pkg/version"
 	v1 "github.com/ivannovak/glide/v2/pkg/plugin/sdk/v1"
 )
@@ -23,12 +17,12 @@ func NewGRPCPlugin() *GRPCPlugin {
 		Name:        "go",
 		Version:     version.Version,
 		Author:      "Glide Team",
-		Description: "Go framework detector and command provider for Glide",
+		Description: "Go framework detector for Glide",
 		Homepage:    "https://github.com/ivannovak/glide-plugin-go",
 		License:     "MIT",
-		Tags:        []string{"language", "go", "golang"},
+		Tags:        []string{"language", "go", "golang", "detector"},
 		Aliases:     []string{"golang"},
-		Namespaced:  false, // Commands don't need namespace (go build, not go:build)
+		Namespaced:  false,
 	}
 
 	p := &GRPCPlugin{
@@ -36,146 +30,9 @@ func NewGRPCPlugin() *GRPCPlugin {
 		detector:   NewGoDetector(),
 	}
 
-	// Register all Go commands
-	p.registerCommands()
+	// Note: This plugin only provides framework detection, not commands
+	// Commands are handled by Glide's core CLI based on detected context
 
 	return p
 }
 
-// registerCommands registers all Go-related commands
-func (p *GRPCPlugin) registerCommands() {
-	commands := map[string]struct {
-		cmd         string
-		description string
-		category    string
-	}{
-		"build": {
-			cmd:         "go build ./...",
-			description: "Build Go project",
-			category:    "build",
-		},
-		"test": {
-			cmd:         "go test ./...",
-			description: "Run Go tests",
-			category:    "test",
-		},
-		"test:v": {
-			cmd:         "go test -v ./...",
-			description: "Run tests with verbose output",
-			category:    "test",
-		},
-		"test:race": {
-			cmd:         "go test -race ./...",
-			description: "Run tests with race detector",
-			category:    "test",
-		},
-		"test:cover": {
-			cmd:         "go test -cover ./...",
-			description: "Run tests with coverage",
-			category:    "test",
-		},
-		"run": {
-			cmd:         "go run .",
-			description: "Run Go application",
-			category:    "run",
-		},
-		"fmt": {
-			cmd:         "go fmt ./...",
-			description: "Format Go code",
-			category:    "format",
-		},
-		"vet": {
-			cmd:         "go vet ./...",
-			description: "Examine Go source code",
-			category:    "lint",
-		},
-		"mod:tidy": {
-			cmd:         "go mod tidy",
-			description: "Add missing and remove unused modules",
-			category:    "dependencies",
-		},
-		"mod:download": {
-			cmd:         "go mod download",
-			description: "Download modules to local cache",
-			category:    "dependencies",
-		},
-		"mod:vendor": {
-			cmd:         "go mod vendor",
-			description: "Make vendored copy of dependencies",
-			category:    "dependencies",
-		},
-		"generate": {
-			cmd:         "go generate ./...",
-			description: "Generate Go files",
-			category:    "build",
-		},
-	}
-
-	for name, def := range commands {
-		cmdDef := def // Capture for closure
-		handler := v1.NewSimpleCommand(
-			&v1.CommandInfo{
-				Name:        name,
-				Description: cmdDef.description,
-				Category:    cmdDef.category,
-				Visibility:  "project-only", // Only show in Go projects
-			},
-			func(ctx context.Context, req *v1.ExecuteRequest) (*v1.ExecuteResponse, error) {
-				return p.executeShellCommand(ctx, cmdDef.cmd, req)
-			},
-		)
-		p.RegisterCommand(name, handler)
-	}
-}
-
-// executeShellCommand runs a shell command and returns the response
-func (p *GRPCPlugin) executeShellCommand(ctx context.Context, cmdStr string, req *v1.ExecuteRequest) (*v1.ExecuteResponse, error) {
-	// Parse command string
-	parts := strings.Fields(cmdStr)
-	if len(parts) == 0 {
-		return &v1.ExecuteResponse{
-			Success:  false,
-			ExitCode: 1,
-			Error:    "empty command",
-		}, nil
-	}
-
-	// Append any additional args from the request
-	parts = append(parts, req.Args...)
-
-	// Create command
-	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
-	cmd.Dir = req.WorkDir
-	if cmd.Dir == "" {
-		cmd.Dir = "."
-	}
-
-	// Set environment - start with parent environment
-	cmd.Env = os.Environ()
-	// Override/add custom environment variables
-	for k, v := range req.Env {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	// Execute
-	output, err := cmd.CombinedOutput()
-	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else {
-			return &v1.ExecuteResponse{
-				Success:  false,
-				ExitCode: 1,
-				Error:    err.Error(),
-			}, nil
-		}
-	}
-
-	return &v1.ExecuteResponse{
-		Success:  exitCode == 0,
-		ExitCode: int32(exitCode),
-		Stdout:   output,
-		Stderr:   []byte{},
-	}, nil
-}
