@@ -8,12 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ivannovak/glide/v2/pkg/plugin/sdk"
+	"github.com/ivannovak/glide/v3/pkg/plugin/sdk"
 )
 
 // GoDetector detects Go projects and implements sdk.ContextExtension
 type GoDetector struct {
-	base *sdk.BaseFrameworkDetector
+	base            *sdk.BaseFrameworkDetector
+	enableWorkspace bool
+	enableTools     bool
 }
 
 // NewGoDetector creates a new Go detector
@@ -95,7 +97,21 @@ func NewGoDetector() *GoDetector {
 		},
 	})
 
-	return &GoDetector{base: base}
+	return &GoDetector{
+		base:            base,
+		enableWorkspace: true,
+		enableTools:     true,
+	}
+}
+
+// SetEnableWorkspace sets whether workspace detection is enabled
+func (d *GoDetector) SetEnableWorkspace(enabled bool) {
+	d.enableWorkspace = enabled
+}
+
+// SetEnableTools sets whether tool detection is enabled
+func (d *GoDetector) SetEnableTools(enabled bool) {
+	d.enableTools = enabled
 }
 
 // Name returns the unique identifier for this extension
@@ -131,13 +147,15 @@ func (d *GoDetector) Detect(ctx context.Context, projectPath string) (interface{
 		data["module"] = d.detectModuleName(goModPath)
 	}
 
-	// Check for workspace
-	if _, err := os.Stat(filepath.Join(projectPath, "go.work")); err == nil {
-		data["workspace"] = true
+	// Check for workspace (if enabled)
+	if d.enableWorkspace {
+		if _, err := os.Stat(filepath.Join(projectPath, "go.work")); err == nil {
+			data["workspace"] = true
+		}
 	}
 
-	// Check for common Go tools
-	if d.hasGoTools(projectPath) {
+	// Check for common Go tools (if enabled)
+	if d.enableTools && d.hasGoTools(projectPath) {
 		data["has_dev_tools"] = true
 		// Adjust confidence
 		if conf, ok := data["confidence"].(int); ok {

@@ -10,11 +10,11 @@ import (
 
 func TestGoDetector_Detect(t *testing.T) {
 	tests := []struct {
-		name         string
-		setupFunc    func(t *testing.T) string
-		wantDetected bool
-		wantVersion  string
-		wantModule   string
+		name          string
+		setupFunc     func(t *testing.T) string
+		wantDetected  bool
+		wantVersion   string
+		wantModule    string
 		wantWorkspace bool
 	}{
 		{

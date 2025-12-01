@@ -1,20 +1,20 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/ivannovak/glide-plugin-go/internal/plugin"
-	v1 "github.com/ivannovak/glide/v2/pkg/plugin/sdk/v1"
+	"github.com/ivannovak/glide/v3/pkg/plugin/sdk/v2"
 )
 
 func main() {
 	// Create the plugin instance
-	p := plugin.NewGRPCPlugin()
+	p := plugin.New()
 
-	// Start the plugin server
-	if err := v1.RunPlugin(p); err != nil {
-		log.Printf("Plugin server error: %v", err)
+	// Start the plugin server using SDK v2
+	if err := v2.Serve(p); err != nil {
+		fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
 		os.Exit(1)
 	}
 }
